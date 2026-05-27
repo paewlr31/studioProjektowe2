@@ -7,7 +7,7 @@ import random
 from typing import Optional, Callable, Any
 
 from agents.agent import Agent
-from agents.models import FeedItem, AgentAction, ActionType
+from agents.models import FeedItem, AgentAction, ActionType, Topic
 from analysis.graph import (
     build_interaction_graph,
     compute_metrics,
@@ -15,7 +15,16 @@ from analysis.graph import (
     compute_activity_entropy,
     graph_to_vis_data,
 )
+from analysis.opinions import compute_opinion_metrics
 from config import settings
+
+DEFAULT_TOPICS = [
+    Topic("budzet", "Budżet osiedla", "Podział funduszy na remonty i inwestycje", "polarizing"),
+    Topic("zielone", "Zielone tereny", "Parki, skwery i ochrona drzew", "neutral"),
+    Topic("bezpieczenstwo", "Bezpieczeństwo", "Monitoring, oświetlenie, patrole", "neutral"),
+    Topic("parkowanie", "Parkowanie", "Miejsca parkingowe i strefy", "polarizing"),
+    Topic("kultura", "Wydarzenia kulturalne", "Festyny, warsztaty, spotkania", "neutral"),
+]
 
 CONTEXT_EVENTS = {
     "crisis": [
@@ -50,6 +59,7 @@ class SimulationState:
         self.current_event: Optional[str] = None
         self.events_log: list[dict] = []
         self.tick_actions: list[dict] = []  # actions taken in this tick
+        self.topics: list = []
         self.status: str = "idle"  # idle | running | paused | finished
         self.config: dict = {}
 
@@ -83,12 +93,20 @@ class SimulationEngine:
         memory_mode = MemoryMode(config.get("memory_mode", "full"))
         goal_distribution = config.get("goal_distribution", None)
 
+        # Initialize topics from config or use defaults
+        raw_topics = config.get("topics", None)
+        if raw_topics:
+            self.state.topics = [Topic(**t) if isinstance(t, dict) else t for t in raw_topics]
+        else:
+            self.state.topics = list(DEFAULT_TOPICS)
+
         self.state.agents = create_agents(
             n=n,
             agent_types=agent_types,
             goal=goal,
             memory_mode=memory_mode,
             goal_distribution=goal_distribution,
+            topics=self.state.topics,
         )
         self.state.status = "idle"
 
@@ -178,6 +196,10 @@ class SimulationEngine:
             # Activity entropy
             metrics["activity_entropy"] = compute_activity_entropy(actions_count)
 
+            # Opinion metrics
+            opinion_metrics = compute_opinion_metrics(self.state.agents, self.state.topics)
+            metrics["opinion"] = opinion_metrics
+
             self.state.metrics_history.append(metrics)
 
             # Update graph viz data
@@ -192,6 +214,7 @@ class SimulationEngine:
                 "feed": [self._feed_item_to_dict(f) for f in self.state.feed[-20:]],
                 "actions": self.state.tick_actions,
                 "event": event,
+                "topics": [{"id": t.id, "name": t.name, "description": t.description, "category": t.category} for t in self.state.topics],
             })
 
             await asyncio.sleep(tick_delay)
@@ -205,10 +228,20 @@ class SimulationEngine:
 
     async def _agent_turn(self, agent: Agent, tick: int):
         """Run one agent's turn: decide + apply action."""
+        # Regenerate energy before the turn
+        agent.regenerate_energy()
+
         action = await asyncio.get_event_loop().run_in_executor(
             None,
             lambda: agent.decide_action(self.state.feed, tick, self.state.current_event)
         )
+
+        # Validate energy — if agent chose an unaffordable action, force IGNORE
+        cost = agent.get_action_cost(action.action_type)
+        if action.action_type != ActionType.IGNORE and agent.energy < cost:
+            action = AgentAction(agent_id=agent.id, action_type=ActionType.IGNORE, tick=tick)
+        else:
+            agent.deduct_energy(action.action_type)
 
         outcome = "neutral"
         target_agent = None
@@ -219,12 +252,16 @@ class SimulationEngine:
                 author_id=agent.id,
                 content=action.content or f"Post by {agent.name} at tick {tick}",
                 tick=tick,
+                topic=action.topic,
+                stance=action.stance,
             )
             self.state.feed.append(item)
-            # Trim feed
             if len(self.state.feed) > settings.feed_size:
                 self.state.feed = self.state.feed[-settings.feed_size:]
             outcome = "positive"
+            # Self-reinforcement: posting reinforces own opinion
+            if action.topic and action.stance:
+                agent.apply_opinion_influence(action.topic, action.stance, 0.3)
 
         elif action.action_type == ActionType.COMMENT and action.target_id:
             target_item = next((f for f in self.state.feed if f.id == action.target_id), None)
@@ -236,21 +273,26 @@ class SimulationEngine:
                     tick=tick,
                     item_type="comment",
                     parent_id=target_item.id,
+                    topic=action.topic or target_item.topic,
+                    stance=action.stance,
                 )
                 target_item.comments.append(comment.id)
                 self.state.feed.append(comment)
                 target_agent = target_item.author_id
-                # Log interaction
                 self.state.interaction_log.append({
                     "from": agent.id,
                     "to": target_agent,
                     "type": "comment",
                     "tick": tick,
                 })
-                # Reputation for target
                 target = next((a for a in self.state.agents if a.id == target_agent), None)
                 if target:
                     target.reputation += 1
+                    # Bidirectional opinion influence:
+                    # Commenter shifts toward target's stance
+                    agent.apply_opinion_influence(action.topic or target_item.topic, target_item.stance, 1.0)
+                    # Target shifts toward commenter's stance
+                    target.apply_opinion_influence(action.topic, action.stance, 1.0)
                 outcome = "positive"
 
         elif action.action_type == ActionType.LIKE and action.target_id:
@@ -267,6 +309,8 @@ class SimulationEngine:
                 target = next((a for a in self.state.agents if a.id == target_agent), None)
                 if target:
                     target.reputation += 1
+                    # Mild opinion influence — liker shifts slightly toward target's stance
+                    agent.apply_opinion_influence(action.topic or target_item.topic, target_item.stance, 0.4)
                 outcome = "positive"
 
         agent.update_state(action, outcome, target_agent)
@@ -294,6 +338,8 @@ class SimulationEngine:
             "comments": item.comments,
             "type": item.item_type,
             "parent_id": item.parent_id,
+            "topic": item.topic,
+            "stance": item.stance,
         }
 
     def get_full_state(self) -> dict:
@@ -306,4 +352,5 @@ class SimulationEngine:
             "metrics_history": self.state.metrics_history,
             "graph": self.state.graph_data,
             "events_log": self.state.events_log,
+            "topics": [{"id": t.id, "name": t.name, "description": t.description, "category": t.category} for t in self.state.topics],
         }

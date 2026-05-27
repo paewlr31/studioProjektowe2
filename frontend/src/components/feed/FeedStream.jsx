@@ -8,7 +8,35 @@ const TYPE_COLORS = {
   neutral: '#6b7280',
 }
 
-export function FeedStream({ feed = [], agents = [], autoScroll = true }) {
+const STANCE_COLORS = {
+  for: '#22d3ee',
+  against: '#ef4444',
+  neutral: '#6b7280',
+}
+
+const STANCE_ICONS = {
+  for: '✓',
+  against: '✗',
+  neutral: '–',
+}
+
+function TopicBadge({ topic, stance, topics }) {
+  const t = topics?.find(t => t.id === topic)
+  if (!topic) return null
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono"
+      style={{
+        background: (stance ? STANCE_COLORS[stance] : '#6366f1') + '18',
+        color: stance ? STANCE_COLORS[stance] : '#6366f1',
+        border: '1px solid ' + (stance ? STANCE_COLORS[stance] : '#6366f1') + '33',
+      }}>
+      {stance && <span>{STANCE_ICONS[stance]}</span>}
+      {t?.name || topic}
+    </span>
+  )
+}
+
+export function FeedStream({ feed = [], agents = [], topics = [], autoScroll = true }) {
   const bottomRef = useRef(null)
   const agentMap = Object.fromEntries(agents.map(a => [a.id, a]))
 
@@ -33,6 +61,7 @@ export function FeedStream({ feed = [], agents = [], autoScroll = true }) {
               <div className="flex items-center gap-2 mb-2">
                 <AgentTypeDot type={agent?.type} />
                 <span className="text-xs font-semibold text-text">{agent?.name || item.author_id}</span>
+                <TopicBadge topic={item.topic} stance={item.stance} topics={topics} />
                 <span className="text-xs font-mono text-text-dim ml-auto">tick {item.tick}</span>
               </div>
               <p className="text-xs text-text leading-relaxed">{item.content}</p>
@@ -54,6 +83,7 @@ export function FeedStream({ feed = [], agents = [], autoScroll = true }) {
                       <div className="flex-1 min-w-0">
                         <span className="text-xs font-medium text-text-dim">{ca?.name || c.author_id}: </span>
                         <span className="text-xs text-text-dim">{c.content}</span>
+                        <TopicBadge topic={c.topic} stance={c.stance} topics={topics} />
                       </div>
                     </div>
                   )

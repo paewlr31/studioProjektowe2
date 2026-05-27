@@ -4,7 +4,7 @@ import { FeedStream, ActionLog } from '../components/feed/FeedStream'
 import { EmptyState, AgentTypeDot } from '../components/ui'
 
 export default function FeedPage() {
-  const { feed, agents, lastActions, tick } = useSimStore()
+  const { feed, agents, lastActions, tick, topics } = useSimStore()
   const [view, setView] = useState('feed') // feed | actions
 
   const typeCount = agents.reduce((acc, a) => {
@@ -40,7 +40,7 @@ export default function FeedPage() {
         <div className="flex-1 overflow-hidden p-4">
           {view === 'feed' ? (
             feed.length > 0
-              ? <FeedStream feed={feed} agents={agents} autoScroll />
+              ? <FeedStream feed={feed} agents={agents} topics={topics} autoScroll />
               : <EmptyState message="Feed jest pusty. Uruchom symulację." icon="◈" />
           ) : (
             lastActions.length > 0

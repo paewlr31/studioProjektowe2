@@ -44,6 +44,16 @@ export default function AgentList({ agents = [] }) {
             }}>
               {agent.reputation}
             </span>
+
+            {/* Energy bar */}
+            <div className="w-10 flex-shrink-0">
+              <div className="h-1 rounded-full overflow-hidden" style={{ background: '#1e1e2e' }}>
+                <div className="h-full rounded-full transition-all duration-300" style={{
+                  width: `${Math.min(100, (agent.energy || 0))}%`,
+                  background: agent.energy > 60 ? '#10b981' : agent.energy > 30 ? '#f59e0b' : '#ef4444'
+                }} />
+              </div>
+            </div>
           </button>
         )
       })}
@@ -86,8 +96,13 @@ export function AgentDetail({ agent }) {
           <div className="text-text truncate">{agent.goal?.replace(/_/g, ' ')}</div>
         </div>
         <div>
-          <span className="text-text-dim">memory</span>
-          <div className="text-text">{agent.memory_size} entries</div>
+          <span className="text-text-dim">energy</span>
+          <div className="text-text">
+            <span style={{ color: agent.energy > 60 ? '#10b981' : agent.energy > 30 ? '#f59e0b' : '#ef4444' }}>
+              {agent.energy ?? '—'}
+            </span>
+            <span className="text-text-dim"> / 100</span>
+          </div>
         </div>
       </div>
 

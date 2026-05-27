@@ -24,6 +24,8 @@ const useSimStore = create((set, get) => ({
   eventsLog: [],
   lastActions: [],
   currentEvent: null,
+  topics: [],
+  opinionsHistory: [],
 
   // Experiments list
   experiments: [],
@@ -87,6 +89,7 @@ const useSimStore = create((set, get) => ({
           graphData: d.graph || { nodes: [], edges: [] },
           eventsLog: d.events_log || [],
           config: d.config || {},
+          topics: d.topics || [],
         })
         if (d.metrics_history?.length > 0) {
           set({ metrics: d.metrics_history[d.metrics_history.length - 1] })
@@ -99,16 +102,30 @@ const useSimStore = create((set, get) => ({
       case 'tick': {
         const d = msg.data
         const newMetrics = d.metrics
-        set((state) => ({
-          tick: d.tick,
-          metrics: newMetrics,
-          metricsHistory: [...state.metricsHistory, newMetrics],
-          graphData: d.graph || state.graphData,
-          agents: d.agents || state.agents,
-          feed: d.feed || state.feed,
-          lastActions: d.actions || [],
-          currentEvent: d.event || null,
-        }))
+        set((state) => {
+          const op = newMetrics?.opinion
+          const newOpinionEntry = op ? {
+            tick: d.tick,
+            polarization: op.polarization,
+            consensus: op.consensus,
+            extreme_ratio: op.extreme_ratio,
+            per_topic: op.per_topic || {},
+          } : null
+          return {
+            tick: d.tick,
+            metrics: newMetrics,
+            metricsHistory: [...state.metricsHistory, newMetrics],
+            graphData: d.graph || state.graphData,
+            agents: d.agents || state.agents,
+            feed: d.feed || state.feed,
+            lastActions: d.actions || [],
+            currentEvent: d.event || null,
+            topics: d.topics || state.topics,
+            opinionsHistory: newOpinionEntry
+              ? [...state.opinionsHistory, newOpinionEntry]
+              : state.opinionsHistory,
+          }
+        })
         break
       }
       case 'event':
@@ -138,7 +155,7 @@ const useSimStore = create((set, get) => ({
   },
 
   startExperiment: async (experimentId, tickDelay = 0.8) => {
-    set({ metricsHistory: [], lastActions: [], eventsLog: [], currentEvent: null, tick: 0 })
+    set({ metricsHistory: [], lastActions: [], eventsLog: [], currentEvent: null, tick: 0, topics: [], opinionsHistory: [] })
     await fetch(`${API}/simulation/experiment`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -147,7 +164,7 @@ const useSimStore = create((set, get) => ({
   },
 
   startCustom: async (config) => {
-    set({ metricsHistory: [], lastActions: [], eventsLog: [], currentEvent: null, tick: 0 })
+    set({ metricsHistory: [], lastActions: [], eventsLog: [], currentEvent: null, tick: 0, topics: [], opinionsHistory: [] })
     await fetch(`${API}/simulation/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

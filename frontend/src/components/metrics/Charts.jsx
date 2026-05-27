@@ -88,6 +88,41 @@ export function ReputationBar({ agents }) {
   )
 }
 
+export function OpinionOverTimeChart({ data = [], topics = [] }) {
+  const TOPIC_COLORS = ['#6366f1', '#22d3ee', '#f59e0b', '#a855f7', '#10b981', '#f43f5e', '#3b82f6', '#84cc16']
+  const chartData = data.map(d => {
+    const row = { tick: d.tick, polarization: d.polarization, consensus: d.consensus, extreme_ratio: d.extreme_ratio }
+    if (d.per_topic) {
+      Object.entries(d.per_topic).forEach(([tid, val]) => {
+        row[`topic_mean_${tid}`] = val.mean
+        row[`topic_std_${tid}`] = val.std
+      })
+    }
+    return row
+  })
+
+  if (chartData.length === 0) return null
+
+  return (
+    <ResponsiveContainer width="100%" height={160}>
+      <LineChart data={chartData} style={CHART_STYLE}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
+        <XAxis dataKey="tick" tick={{ fill: '#7c7c9a', fontSize: 9 }} tickLine={false} axisLine={false} />
+        <YAxis tick={{ fill: '#7c7c9a', fontSize: 9 }} tickLine={false} axisLine={false} width={36} />
+        <Tooltip {...TooltipStyle} />
+        <Legend wrapperStyle={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: '#7c7c9a' }} />
+        <Line type="monotone" dataKey="polarization" stroke="#ef4444" strokeWidth={1.5} dot={false} name="Polaryzacja" />
+        <Line type="monotone" dataKey="consensus" stroke="#10b981" strokeWidth={1.5} dot={false} name="Konsensus" />
+        {topics.map((t, i) => (
+          <Line key={t.id} type="monotone" dataKey={`topic_mean_${t.id}`}
+            stroke={TOPIC_COLORS[i % TOPIC_COLORS.length]}
+            strokeWidth={1} strokeDasharray="4 2" dot={false} name={t.name} />
+        ))}
+      </LineChart>
+    </ResponsiveContainer>
+  )
+}
+
 export function ActivityChart({ data }) {
   return (
     <ResponsiveContainer width="100%" height={120}>

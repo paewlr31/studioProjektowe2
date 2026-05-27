@@ -16,7 +16,16 @@ const COMMUNITY_PALETTE = [
 // Persist positions between renders
 const positionCache = new Map()
 
-export default function ForceGraph({ nodes = [], edges = [], width = 600, height = 500, colorBy = 'type' }) {
+const OPINION_GRADIENT = (val) => {
+  if (val === undefined || val === null) return '#6b7280'
+  const t = (val + 1) / 2
+  const r = Math.round(239 * (1 - t) + 34 * t)
+  const g = Math.round(68 * (1 - t) + 211 * t)
+  const b = Math.round(68 * (1 - t) + 238 * t)
+  return `rgb(${r}, ${g}, ${b})`
+}
+
+export default function ForceGraph({ nodes = [], edges = [], width = 600, height = 500, colorBy = 'type', opinionMap = {}, selectedTopic = null }) {
   const svgRef = useRef(null)
   const simRef = useRef(null)
   const tooltipRef = useRef(null)
@@ -25,8 +34,15 @@ export default function ForceGraph({ nodes = [], edges = [], width = 600, height
     if (colorBy === 'community') {
       return COMMUNITY_PALETTE[node.community % COMMUNITY_PALETTE.length] || '#6366f1'
     }
+    if (colorBy === 'opinion') {
+      const opinions = opinionMap[node.id]
+      if (opinions && selectedTopic && opinions[selectedTopic]) {
+        return OPINION_GRADIENT(opinions[selectedTopic].value)
+      }
+      return '#6b7280'
+    }
     return TYPE_COLORS[node.type] || '#6b7280'
-  }, [colorBy])
+  }, [colorBy, opinionMap, selectedTopic])
 
   useEffect(() => {
     if (!svgRef.current || nodes.length === 0) return
@@ -144,6 +160,12 @@ export default function ForceGraph({ nodes = [], edges = [], width = 600, height
     // Tooltip interactions
     node
       .on('mouseover', (e, d) => {
+        const opinions = opinionMap[d.id]
+        let opinionHtml = ''
+        if (opinions && selectedTopic && opinions[selectedTopic]) {
+          const o = opinions[selectedTopic]
+          opinionHtml = `<div>Opinia: <span style="color:${OPINION_GRADIENT(o.value)}">${o.value.toFixed(2)}</span> (pewność: ${o.confidence.toFixed(2)})</div>`
+        }
         tooltip
           .style('opacity', 1)
           .html(`
@@ -152,6 +174,7 @@ export default function ForceGraph({ nodes = [], edges = [], width = 600, height
             <div>Reputation: <span style="color:#e2e2f0">${d.reputation}</span></div>
             <div>Degree: ${d.degree || 0}</div>
             <div>Community: ${d.community ?? '—'}</div>
+            ${opinionHtml}
           `)
       })
       .on('mousemove', (e) => {
@@ -175,7 +198,7 @@ export default function ForceGraph({ nodes = [], edges = [], width = 600, height
     })
 
     return () => sim.stop()
-  }, [nodes, edges, width, height, colorBy, getColor])
+  }, [nodes, edges, width, height, colorBy, getColor, opinionMap, selectedTopic])
 
   return (
     <div className="relative w-full h-full" style={{ background: '#0d0d14' }}>

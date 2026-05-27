@@ -1,7 +1,7 @@
 import React from 'react'
 import useSimStore from '../stores/simStore'
 import { Card, Button, EmptyState } from '../components/ui'
-import { MultiLineChart, MetricsLineChart, ReputationBar } from '../components/metrics/Charts'
+import { MultiLineChart, MetricsLineChart, ReputationBar, OpinionOverTimeChart } from '../components/metrics/Charts'
 
 function StatRow({ label, value, unit = '' }) {
   return (
@@ -13,7 +13,7 @@ function StatRow({ label, value, unit = '' }) {
 }
 
 export default function ReportPage() {
-  const { metricsHistory, agents, eventsLog, tick, config, status, exportResults } = useSimStore()
+  const { metricsHistory, agents, eventsLog, tick, config, status, exportResults, topics, opinionsHistory } = useSimStore()
 
   const hasData = metricsHistory.length > 2
 
@@ -170,6 +170,41 @@ export default function ReportPage() {
                 </div>
               )
             })}
+          </div>
+        </Card>
+      )}
+
+      {/* Opinion evolution */}
+      {opinionsHistory.length > 1 && (
+        <Card>
+          <div className="text-xs font-mono text-text-dim uppercase tracking-wider mb-4">Dynamika Opinii</div>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <OpinionOverTimeChart data={opinionsHistory} topics={topics} />
+            </div>
+            <div className="space-y-2 text-xs font-mono">
+              <div className="text-text-dim mb-2">Podsumowanie opinii</div>
+              {Object.entries(opinionsHistory[opinionsHistory.length - 1]?.per_topic || {}).map(([tid, val]) => (
+                <div key={tid} className="flex justify-between py-1 border-b border-border/50">
+                  <span className="text-text-dim">{val.name || tid}</span>
+                  <span className="text-text">
+                    średnia: {val.mean.toFixed(2)} ±{val.std.toFixed(2)}
+                  </span>
+                </div>
+              ))}
+              <div className="flex justify-between py-1 border-b border-border/50">
+                <span className="text-text-dim">Polaryzacja końcowa</span>
+                <span className="text-troll font-semibold">
+                  {opinionsHistory[opinionsHistory.length - 1]?.polarization.toFixed(3)}
+                </span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-text-dim">Konsensus końcowy</span>
+                <span className="text-cooperative font-semibold">
+                  {opinionsHistory[opinionsHistory.length - 1]?.consensus.toFixed(3)}
+                </span>
+              </div>
+            </div>
           </div>
         </Card>
       )}

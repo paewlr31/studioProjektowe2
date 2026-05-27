@@ -1,16 +1,27 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useMemo } from 'react'
 import useSimStore from '../stores/simStore'
 import ForceGraph from '../components/graph/ForceGraph'
 import { Card, EmptyState, Badge, AgentTypeDot } from '../components/ui'
 
 export default function GraphPage() {
-  const { graphData, metrics, agents, tick } = useSimStore()
+  const { graphData, metrics, agents, tick, topics } = useSimStore()
   const [colorBy, setColorBy] = useState('type')
+  const [selectedTopic, setSelectedTopic] = useState(topics?.[0]?.id || null)
   const containerRef = useRef(null)
 
   const hasData = graphData.nodes.length > 0
 
   const TYPE_COLORS = { cooperative: '#22d3ee', selfish: '#f59e0b', troll: '#ef4444', neutral: '#6b7280' }
+
+  const opinionMap = useMemo(() => {
+    const map = {}
+    agents.forEach(a => {
+      if (a.opinions) {
+        map[a.id] = a.opinions
+      }
+    })
+    return map
+  }, [agents])
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -22,15 +33,26 @@ export default function GraphPage() {
           <span className="text-xs font-mono text-text">tick {tick}</span>
           <div className="ml-auto flex items-center gap-2">
             <span className="text-xs text-text-dim font-mono">Kolor:</span>
-            {['type', 'community'].map(opt => (
+            {['type', 'community', 'opinion'].map(opt => (
               <button key={opt}
                 onClick={() => setColorBy(opt)}
                 className={`text-xs font-mono px-2 py-1 rounded transition-all ${
                   colorBy === opt ? 'bg-accent text-white' : 'text-text-dim hover:text-text'
                 }`}>
-                {opt}
+                {opt === 'opinion' ? 'opinia' : opt}
               </button>
             ))}
+            {colorBy === 'opinion' && topics.length > 0 && (
+              <select
+                value={selectedTopic || ''}
+                onChange={e => setSelectedTopic(e.target.value || null)}
+                className="text-xs font-mono px-2 py-1 rounded bg-surface text-text border border-border"
+              >
+                {topics.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
@@ -42,6 +64,8 @@ export default function GraphPage() {
               width={containerRef.current?.clientWidth || 800}
               height={containerRef.current?.clientHeight || 600}
               colorBy={colorBy}
+              opinionMap={opinionMap}
+              selectedTopic={selectedTopic}
             />
           ) : (
             <div className="flex items-center justify-center h-full">

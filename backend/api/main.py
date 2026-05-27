@@ -75,6 +75,8 @@ class SimulationConfig(BaseModel):
     max_ticks: int = 15
     tick_delay: float = 0.5
     goal_distribution: Optional[dict] = None
+    topics: Optional[list[dict]] = None
+    influence_rate: Optional[float] = None
 
 
 class ExperimentRequest(BaseModel):

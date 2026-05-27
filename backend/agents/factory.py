@@ -1,7 +1,7 @@
 import uuid
 import random
 from agents.agent import Agent
-from agents.models import AgentType, AgentGoal, MemoryMode
+from agents.models import AgentType, AgentGoal, MemoryMode, Topic
 
 NAMES = [
     "Alex", "Blake", "Casey", "Dana", "Eden", "Finn", "Gray", "Hale",
@@ -15,32 +15,25 @@ NAMES = [
 
 def create_agents(
     n: int,
-    agent_types: dict[str, float],  # e.g. {"cooperative": 0.6, "selfish": 0.3, "troll": 0.1}
+    agent_types: dict[str, float],
     goal: AgentGoal = AgentGoal.MAXIMIZE_REPUTATION,
     memory_mode: MemoryMode = MemoryMode.FULL,
     goal_distribution: dict[str, float] | None = None,
+    topics: list[Topic] | None = None,
 ) -> list[Agent]:
-    """
-    Create N agents with given type distribution.
-    agent_types: {type_name: fraction} — fractions should sum to 1.0
-    goal_distribution: optional per-goal fractions
-    """
     agents = []
     names = random.sample(NAMES, min(n, len(NAMES)))
     if n > len(NAMES):
         names += [f"Agent{i}" for i in range(n - len(NAMES))]
 
-    # Build type pool
     type_pool = []
     for type_name, fraction in agent_types.items():
         count = round(fraction * n)
         type_pool.extend([AgentType(type_name)] * count)
-    # Fill remainder
     while len(type_pool) < n:
         type_pool.append(AgentType.NEUTRAL)
     random.shuffle(type_pool)
 
-    # Build goal pool
     goal_pool = []
     if goal_distribution:
         for goal_name, fraction in goal_distribution.items():
@@ -60,6 +53,7 @@ def create_agents(
             goal=goal_pool[i],
             memory_mode=memory_mode,
             name=names[i],
+            topics=topics,
         ))
 
     return agents

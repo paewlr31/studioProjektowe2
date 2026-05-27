@@ -58,6 +58,7 @@ API docs: http://localhost:8000/docs
 3. **Exp 3** – Wpływ pamięci agenta (brak / krótka / pełna)
 4. **Exp 4** – Wpływ celu agenta (reputacja / interakcje / zgodność)
 5. **Exp 5** – Wpływ liczby agentów (10 / 20 / 50)
+6. **Exp 6** – Dynamika opinii (2 tematy / 5 tematów / wysoka polaryzacja)
 
 ## Klucz Groq API
 

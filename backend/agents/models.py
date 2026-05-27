@@ -30,6 +30,21 @@ class ActionType(str, Enum):
 
 
 @dataclass
+class Topic:
+    id: str
+    name: str
+    description: str
+    category: str = "neutral"  # neutral | polarizing | local
+
+
+@dataclass
+class Opinion:
+    topic_id: str
+    value: float = 0.0        # -1.0 .. 1.0
+    confidence: float = 0.5   # 0.0 .. 1.0
+
+
+@dataclass
 class FeedItem:
     id: str
     author_id: str
@@ -39,6 +54,8 @@ class FeedItem:
     comments: list = field(default_factory=list)
     item_type: str = "post"  # post | comment
     parent_id: Optional[str] = None
+    topic: Optional[str] = None    # topic_id
+    stance: Optional[str] = None   # "for" | "against" | "neutral" | None
 
 
 @dataclass
@@ -47,6 +64,8 @@ class AgentAction:
     action_type: ActionType
     content: Optional[str] = None
     target_id: Optional[str] = None  # item or agent being interacted with
+    topic: Optional[str] = None      # topic_id
+    stance: Optional[str] = None     # "for" | "against" | "neutral" | None
     tick: int = 0
 
 

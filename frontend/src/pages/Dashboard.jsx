@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import useSimStore from '../stores/simStore'
 import { MetricCard, Card, EmptyState, Badge } from '../components/ui'
 import SimControls from '../components/ui/SimControls'
-import { MetricsLineChart, MultiLineChart, ActivityChart } from '../components/metrics/Charts'
+import { MetricsLineChart, MultiLineChart, ActivityChart, OpinionOverTimeChart } from '../components/metrics/Charts'
 import AgentList, { AgentDetail } from '../components/agents/AgentList'
 import { ActionLog } from '../components/feed/FeedStream'
 import ExperimentModal from './ExperimentModal'
@@ -15,7 +15,8 @@ function fmt(n, decimals = 2) {
 export default function Dashboard() {
   const {
     status, tick, maxTicks, metrics, metricsHistory, agents,
-    feed, lastActions, currentEvent, eventsLog, config
+    feed, lastActions, currentEvent, eventsLog, config,
+    topics, opinionsHistory
   } = useSimStore()
 
   const [showExpModal, setShowExpModal] = useState(false)
@@ -109,6 +110,33 @@ export default function Dashboard() {
             />
           </div>
 
+          {/* Opinion metric cards */}
+          {metrics?.opinion && (
+            <div className="grid grid-cols-4 gap-3">
+              <MetricCard
+                label="Polaryzacja" icon="⚖"
+                value={metrics.opinion.polarization.toFixed(3)}
+                color="#ef4444"
+              />
+              <MetricCard
+                label="Konsensus" icon="◈"
+                value={metrics.opinion.consensus.toFixed(3)}
+                color="#10b981"
+              />
+              <MetricCard
+                label="Skrajne opinie" icon="▲"
+                value={metrics.opinion.extreme_ratio.toFixed(3)}
+                color="#a855f7"
+              />
+              <MetricCard
+                label="Tematy" icon="◎"
+                value={topics.length}
+                color="#6366f1"
+                sub={topics.map(t => t.name).join(', ')}
+              />
+            </div>
+          )}
+
           {/* Charts */}
           {metricsHistory.length > 1 ? (
             <div className="grid grid-cols-2 gap-4">
@@ -143,6 +171,12 @@ export default function Dashboard() {
                   label="Reputacja"
                 />
               </Card>
+              {opinionsHistory.length > 1 && (
+                <Card className="col-span-2">
+                  <div className="text-xs font-mono text-text-dim mb-3 uppercase tracking-wider">Polaryzacja i konsensus opinii</div>
+                  <OpinionOverTimeChart data={opinionsHistory} topics={topics} />
+                </Card>
+              )}
             </div>
           ) : (
             <Card>

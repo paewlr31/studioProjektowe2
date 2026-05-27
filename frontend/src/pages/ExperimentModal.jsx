@@ -8,6 +8,7 @@ const EXP_GROUPS = [
   { id: 3, label: 'Exp 3 — Pamięć', color: '#a855f7', rq: 'RQ5' },
   { id: 4, label: 'Exp 4 — Cel Agenta', color: '#f59e0b', rq: 'RQ1, RQ2' },
   { id: 5, label: 'Exp 5 — Liczba Agentów', color: '#10b981', rq: 'RQ1, RQ2' },
+  { id: 6, label: 'Exp 6 — Dynamika Opinii', color: '#f43f5e', rq: 'RQ6' },
 ]
 
 export default function ExperimentModal({ onClose }) {
@@ -39,7 +40,7 @@ export default function ExperimentModal({ onClose }) {
           style={{ background: '#0d0d14' }}>
           <div>
             <h2 className="text-sm font-semibold text-text font-mono">Wybierz Eksperyment</h2>
-            <p className="text-xs text-text-dim mt-0.5">5 eksperymentów badawczych · 14 konfiguracji</p>
+            <p className="text-xs text-text-dim mt-0.5">6 eksperymentów badawczych · 17 konfiguracji</p>
           </div>
           <button onClick={onClose} className="text-text-dim hover:text-text text-lg">✕</button>
         </div>
