@@ -84,6 +84,9 @@ class SimulationEngine:
         from agents.factory import create_agents
         from agents.models import AgentGoal, MemoryMode
 
+        if config.get("influence_rate") is not None:
+            settings.influence_rate = config["influence_rate"]
+
         self.state = SimulationState()
         self.state.config = config
 

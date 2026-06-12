@@ -98,3 +98,33 @@ body {
 .pulse-ring {
   animation: pulseRing 1.5s ease-out infinite;
 }
+
+/* Range slider */
+.range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  border-radius: 999px;
+  height: 6px;
+  cursor: pointer;
+}
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #1e1e2e;
+  cursor: pointer;
+  background: currentColor;
+  box-shadow: 0 0 8px rgba(0,0,0,0.4);
+}
+.range-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #1e1e2e;
+  cursor: pointer;
+  background: currentColor;
+  box-shadow: 0 0 8px rgba(0,0,0,0.4);
+}
